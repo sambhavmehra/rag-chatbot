@@ -1,175 +1,139 @@
-# Self-Healing RAG System
+# Self-Healing RAG
 
 <div align="center">
 
-![Self-Healing RAG](https://img.shields.io/badge/RAG-Self--Healing-blue)
-![Python](https://img.shields.io/badge/Python-3.10+-green)
-![React](https://img.shields.io/badge/React-18.3-61DAFB)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+![RAG](https://img.shields.io/badge/RAG-Self--Healing-0f172a?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.10+-22c55e?style=for-the-badge)
+![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-f59e0b?style=for-the-badge)
 
-**Advanced Retrieval-Augmented Generation with Closed-Loop Agents**
+**Production-grade Retrieval-Augmented Generation with closed-loop self-correction.**
 
-*From Fragile Pipelines to Production-Ready Systems*
-
-[Features](#features) • [Architecture](#architecture) • [Installation](#installation) • [Usage](#usage) • [Technical Deep Dive](#technical-deep-dive)
+[Features](#features) · [Architecture](#architecture) · [Installation](#installation) · [Usage](#usage) · [API Reference](#api-reference)
 
 </div>
 
+---
+
 ## Overview
 
-This project implements a **production-ready Self-Healing RAG system** that goes beyond traditional retrieval-augmented generation. Unlike standard RAG's fragile open-loop architecture, this system implements closed-loop feedback at every stage to autonomously detect and correct errors.
+Standard RAG pipelines break in production. Queries don't match documents well, retrieved content goes unvalidated, and errors cascade through the pipeline with no way to recover.
 
-### The Problem with Standard RAG
+This system fixes that. Every stage — retrieval, validation, reranking, generation — feeds back into itself. When something goes wrong, the system detects it and corrects automatically. No hand-holding, no restarts.
 
-Standard RAG systems fail in production because:
-- **Modality Mismatch**: Short queries poorly match long documents
-- **Blind Trust**: No validation of retrieved document relevance
-- **Error Propagation**: Mistakes cascade from retrieval → generation
-- **Static Prompts**: No learning from successful interactions
+---
 
-### Our Solution
+## What's Different
 
-A self-healing system with:
-- ✅ **HyDE**: Generate hypothetical documents for better retrieval
-- ✅ **Query Decomposition**: Break complex queries into atomic sub-questions
-- ✅ **CRAG**: Validate documents and trigger fallback strategies
-- ✅ **Cross-Encoder Reranking**: Precision document scoring
-- ✅ **Dynamic Learning**: Learn from successful query-answer pairs
+| Problem | Standard RAG | This System |
+|---|---|---|
+| Short query ↔ long document mismatch | ❌ Direct embedding comparison | ✅ HyDE bridging |
+| Irrelevant documents pass through | ❌ Blind trust | ✅ CRAG validation |
+| Errors cascade silently | ❌ No recovery | ✅ Fallback at every stage |
+| Static prompts, no learning | ❌ One-size-fits-all | ✅ Dynamic few-shot from feedback |
+
+---
 
 ## Features
 
 ### Query Enhancement
-- **HyDE (Hypothetical Document Embeddings)**: Improves recall by 15-30%
-- **Query Decomposition**: Handles multi-part comparison questions
-- **Automatic Query Rewriting**: Optimizes for search engines
+- **HyDE** — Generates a hypothetical answer, then searches for documents similar to it. Bridges the modality gap between short queries and long documents. Improves recall by 15–30%.
+- **Query Decomposition** — Splits complex, multi-part queries into atomic sub-questions. Retrieves against each separately, then synthesizes a unified answer.
+- **Automatic Rewriting** — Rewrites queries to be more search-engine friendly before retrieval.
 
-### Self-Correction Layer
-- **CRAG (Corrective RAG)**: Three-state document validation (correct/ambiguous/incorrect)
-- **Web Search Fallback**: Automatic external search when needed
-- **Relevance Grading**: LLM-based document quality assessment
+### Self-Correction (CRAG)
+Retrieved documents are graded before use. Each document gets one of three states:
 
-### Precision Ranking
-- **Two-Stage Retrieval**: Bi-encoder recall + Cross-encoder reranking
-- **Hybrid Architecture**: Balance speed (O(n)) with accuracy
-- **Configurable Top-K**: Flexible result set sizes
+- ✅ **Correct** — Use as-is
+- ⚡ **Ambiguous** — Apply knowledge refinement
+- ❌ **Incorrect** — Trigger web search fallback
+
+No document reaches generation untested.
+
+### Two-Stage Reranking
+- **Bi-Encoder** — Fast semantic search across the full corpus. Returns top 50 candidates in O(n).
+- **Cross-Encoder** — Joint query-document encoding with full cross-attention. Precision-scores the candidates, returns top 5.
+
+Speed where you need it. Accuracy where it counts.
 
 ### Continuous Learning
-- **Dynamic Few-Shot**: Learn from user feedback
-- **Example Library**: Store successful query-answer patterns
-- **Feedback Loop**: 👍/👎 integration for quality improvement
+- Users rate answers with 👍 or 👎
+- Positive examples are stored in a vector index
+- Future similar queries automatically pull in relevant examples as few-shot context
+- The system gets better over time without any retraining
 
-### Interactive Frontend
-- **Real-Time Playground**: Test queries with live results
-- **Architecture Diagrams**: Interactive Mermaid visualizations
-- **Statistics Dashboard**: System performance metrics
-- **Technical Documentation**: Comprehensive guides
+---
 
 ## Architecture
 
-### System Components
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    User Query Input                          │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│              1. Query Enhancement Layer                      │
-│  ┌──────────────────┐         ┌──────────────────┐         │
-│  │  HyDE Transform  │◄───────►│ Query Decompose  │         │
-│  └──────────────────┘         └──────────────────┘         │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│              2. Retrieval Layer (Bi-Encoder)                 │
-│            Fast Semantic Search - O(n)                       │
-│                 ↓ Top 50 Candidates                         │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│              3. Validation Layer (CRAG)                      │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐               │
-│  │ Correct  │   │Ambiguous │   │Incorrect │               │
-│  │    ↓     │   │    ↓     │   │    ↓     │               │
-│  │ Continue │   │  Refine  │   │Web Search│               │
-│  └──────────┘   └──────────┘   └──────────┘               │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│            4. Reranking Layer (Cross-Encoder)                │
-│          Precision Scoring - Full Attention                  │
-│                 ↓ Top 5 Results                             │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│              5. Generation Layer                             │
-│  ┌──────────────────────────────────────┐                  │
-│  │  Dynamic Few-Shot Examples (if any)  │                  │
-│  │              ↓                        │                  │
-│  │      LLM Answer Generation           │                  │
-│  └──────────────────────────────────────┘                  │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│              6. Learning Layer (Feedback Loop)               │
-│         User Feedback (👍/👎) → Example Storage             │
-└─────────────────────────────────────────────────────────────┘
+User Query
+    │
+    ▼
+┌─────────────────────────────────┐
+│      1. Query Enhancement       │
+│   HyDE  ·  Decomposition  ·     │
+│         Rewriting               │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│   2. Retrieval (Bi-Encoder)     │
+│   Fast semantic search → Top 50 │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│     3. Validation (CRAG)        │
+│  Correct → Continue             │
+│  Ambiguous → Refine             │
+│  Incorrect → Web Search         │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│   4. Reranking (Cross-Encoder)  │
+│   Precision scoring → Top 5     │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│       5. Generation             │
+│   Dynamic few-shot + LLM        │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│     6. Feedback Loop            │
+│   👍/👎 → Example storage       │
+└─────────────────────────────────┘
 ```
-
-### Bi-Encoder vs Cross-Encoder
-
-| Aspect | Bi-Encoder | Cross-Encoder |
-|--------|------------|---------------|
-| **Architecture** | Separate encoding | Joint encoding |
-| **Input** | Query → [768d], Doc → [768d] | [CLS] Query [SEP] Doc [SEP] |
-| **Scoring** | Cosine similarity | Direct prediction |
-| **Speed** | Fast (O(n) after pre-compute) | Slow (O(n×m)) |
-| **Accuracy** | Moderate | High |
-| **Use Case** | Initial recall (Top 50-100) | Precision reranking (Top 5-10) |
 
 ---
 
 ## Installation
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- Groq API Key
+**Prerequisites:** Python 3.10+, Node.js 18+, Groq API key
 
-### Backend Setup
+### Backend
 
 ```bash
-# Clone the repository
 git clone <your-repo>
 cd self-healing-RAG
 
-# Create virtual environment
 python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
 
-# Install Python dependencies
 pip install -r requirements.txt
 
-# Configure environment
 echo 'GROQ_API_KEY=your-key-here' > .env
 ```
 
-### Frontend Setup
+### Frontend
 
 ```bash
-# Navigate to frontend directory
 cd frontend
-
-# Install Node dependencies
 npm install
-
-# Return to root
 cd ..
 ```
 
@@ -177,69 +141,54 @@ cd ..
 
 ## Usage
 
-### Quick Start
-
-**Option 1: Use the startup script (Recommended)**
+**Recommended — use the startup script:**
 
 ```bash
 chmod +x start.sh
 ./start.sh
 ```
 
-**Option 2: Manual startup**
+**Or manually:**
 
-Terminal 1 (Backend):
 ```bash
-source .venv/bin/activate
-cd backend
-python api_server.py
+# Terminal 1
+source .venv/bin/activate && cd backend && python api_server.py
+
+# Terminal 2
+cd frontend && npm run dev
 ```
 
-Terminal 2 (Frontend):
-```bash
-cd frontend
-npm run dev
-```
-
-### Access the Application
-
-- **Frontend**: http://localhost:3000
-- **API Docs**: http://localhost:8000/docs
-- **API Health**: http://localhost:8000/api/health
-
-### Testing the System
-
-1. **Playground Tab**: Enter queries and see real-time results
-2. **Architecture Tab**: Explore interactive system diagrams
-3. **Documentation Tab**: Learn about each technique
-4. **Statistics Tab**: Monitor system performance
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| API Docs | http://localhost:8000/docs |
+| Health Check | http://localhost:8000/api/health |
 
 ### Sample Queries
 
 ```
-Simple:
-- "What is RAG and how does it work?"
-- "Explain HyDE technique"
+# Simple
+"What is RAG and how does it work?"
+"Explain HyDE"
 
-Complex (triggers decomposition):
-- "Compare HyDE and standard retrieval methods"
-- "Which is better: bi-encoder or cross-encoder?"
+# Triggers query decomposition
+"Compare HyDE and standard retrieval"
+"Which is better: bi-encoder or cross-encoder?"
 
-Technical:
-- "How does CRAG improve retrieval quality?"
-- "Explain the self-correction mechanism"
+# Technical
+"How does CRAG improve retrieval quality?"
+"Walk me through the self-correction mechanism"
 ```
 
 ---
 
 ## Configuration
 
-### Backend Configuration
+### Enable Web Search
 
-Edit `backend/api_server.py`:
+In `backend/api_server.py`:
 
 ```python
-# Enable web search (requires Tavily API key)
 rag_system = SelfHealingRAGSystem(
     groq_api_key=groq_api_key,
     tavily_api_key=os.getenv("TAVILY_API_KEY"),
@@ -247,173 +196,30 @@ rag_system = SelfHealingRAGSystem(
 )
 ```
 
-### Frontend Configuration
+### Change Ports
 
-Edit `frontend/vite.config.js` to change ports:
+In `frontend/vite.config.js`:
 
 ```javascript
 export default defineConfig({
   server: {
-    port: 3000,  // Change frontend port
+    port: 3000,
     proxy: {
-      '/api': {
-        target: 'http://localhost:8000',  // Backend URL
-      }
+      '/api': { target: 'http://localhost:8000' }
     }
   }
 })
 ```
 
-### Technique Toggles
-
-All techniques can be toggled in the Playground UI:
-- **HyDE**: Toggle hypothetical document generation
-- **Decomposition**: Enable/disable query splitting
-- **CRAG**: Turn validation on/off
-- **Reranking**: Use cross-encoder precision
-- **Learning**: Apply dynamic few-shot examples
-
----
-
-## Technical Deep Dive
-
-### 1. HyDE (Hypothetical Document Embeddings)
-
-**Problem**: Queries are short, documents are long → poor semantic match
-
-**Solution**: Generate a hypothetical answer, then search for documents similar to it
-
-```python
-# Traditional: "How does CRAG work?" → Vector Search
-# HyDE: "How does CRAG work?" → LLM generates hypothetical answer → Vector Search
-```
-
-**Benefits**:
-- Bridges modality gap
-- 15-30% improvement in recall
-- Works without retraining embeddings
-
-### 2. Query Decomposition
-
-**Problem**: Complex queries like "Compare X vs Y" fail to find comparative info
-
-**Solution**: Break into atomic sub-queries
-
-```python
-Input: "Which is better, Llama-3 or GPT-4 for coding?"
-
-Sub-Queries:
-1. "Llama-3 coding capabilities and benchmarks"
-2. "GPT-4 coding performance metrics"
-
-→ Retrieve separately → Synthesize comparison
-```
-
-### 3. CRAG (Corrective RAG)
-
-**Problem**: Standard RAG blindly trusts retrieved documents
-
-**Solution**: Grade relevance and trigger fallback
-
-```python
-for document in retrieved_docs:
-    grade = llm.grade(document, query)
-    
-    if grade == "correct":
-        use_document()
-    elif grade == "ambiguous":
-        refine_document()
-    else:  # incorrect
-        trigger_web_search()
-```
-
-**Three States**:
-- ✅ **Correct**: Use as-is
-- ⚡ **Ambiguous**: Apply knowledge refinement
-- ❌ **Incorrect**: Web search fallback
-
-### 4. Cross-Encoder Reranking
-
-**Two-Stage Strategy**:
-
-```
-Stage 1: Bi-Encoder
-├─ Encode query and docs separately
-├─ Fast cosine similarity: O(n)
-└─ Recall: Top 50 candidates
-
-Stage 2: Cross-Encoder  
-├─ Encode [CLS] query [SEP] doc [SEP] together
-├─ Full cross-attention between all tokens
-├─ Precision scoring: O(n×m)
-└─ Final: Top 5 results
-```
-
-**Why This Works**:
-- Bi-encoder speed for broad recall
-- Cross-encoder accuracy for final ranking
-- Best of both architectures
-
-### 5. Dynamic Few-Shot Learning
-
-**Workflow**:
-
-```python
-# User gives 👍 to a good answer
-system.add_feedback(query, answer, is_positive=True)
-
-# System stores in vector index
-learning_manager.add_good_example(query, answer)
-
-# For new queries, retrieve similar successes
-examples = learning_manager.get_dynamic_prompt(new_query)
-
-# Include in prompt as few-shot context
-prompt = f"{examples}\n\nQuestion: {new_query}\nAnswer:"
-```
-
-**Benefits**:
-- Continuous improvement without retraining
-- Domain-specific knowledge accumulation
-- Reduces hallucinations
-
----
-
-## Performance Metrics
-
-### Benchmark Results
-
-| Metric | Standard RAG | Self-Healing RAG | Improvement |
-|--------|--------------|------------------|-------------|
-| Accuracy | 68% | 87% | +28% |
-| Recall@10 | 72% | 91% | +26% |
-| Precision | 61% | 83% | +36% |
-| User Satisfaction | 3.2/5 | 4.6/5 | +44% |
-
-### Processing Time
-
-- Simple Query: ~1.5s
-- Complex Query (with decomposition): ~3.2s
-- With Web Fallback: ~4.5s
-
-### Component Latency
-
-- HyDE Generation: ~500ms
-- Vector Retrieval: ~50ms
-- CRAG Validation: ~800ms
-- Cross-Encoder Reranking: ~200ms
-- Answer Generation: ~1.2s
+All techniques (HyDE, decomposition, CRAG, reranking, learning) can also be toggled live in the Playground UI.
 
 ---
 
 ## API Reference
 
-### Query Endpoint
+### POST `/api/query`
 
-```bash
-POST /api/query
-Content-Type: application/json
-
+```json
 {
   "query": "How does CRAG work?",
   "enable_hyde": true,
@@ -424,11 +230,12 @@ Content-Type: application/json
 }
 ```
 
-**Response**:
+**Response:**
+
 ```json
 {
   "query": "How does CRAG work?",
-  "answer": "CRAG (Corrective RAG) is a self-correction...",
+  "answer": "CRAG (Corrective RAG) is...",
   "processing_time": 2.34,
   "techniques_used": ["HyDE", "CRAG", "Cross-Encoder"],
   "documents_retrieved": 10,
@@ -436,12 +243,9 @@ Content-Type: application/json
 }
 ```
 
-### Feedback Endpoint
+### POST `/api/feedback`
 
-```bash
-POST /api/feedback
-Content-Type: application/json
-
+```json
 {
   "query": "How does CRAG work?",
   "answer": "CRAG is...",
@@ -449,13 +253,8 @@ Content-Type: application/json
 }
 ```
 
-### Statistics Endpoint
+### GET `/api/statistics`
 
-```bash
-GET /api/statistics
-```
-
-**Response**:
 ```json
 {
   "system_stats": {
@@ -473,80 +272,78 @@ GET /api/statistics
 
 ---
 
+## Performance
+
+| Metric | Standard RAG | Self-Healing RAG | Δ |
+|---|---|---|---|
+| Accuracy | 68% | 87% | +28% |
+| Recall@10 | 72% | 91% | +26% |
+| Precision | 61% | 83% | +36% |
+| User Satisfaction | 3.2/5 | 4.6/5 | +44% |
+
+**Latency breakdown:**
+
+| Component | Time |
+|---|---|
+| HyDE generation | ~500ms |
+| Vector retrieval | ~50ms |
+| CRAG validation | ~800ms |
+| Cross-encoder reranking | ~200ms |
+| Answer generation | ~1.2s |
+| **Simple query (total)** | **~1.5s** |
+| **Complex query (with decomposition)** | **~3.2s** |
+| **With web fallback** | **~4.5s** |
+
+---
+
 ## Testing
 
-### Unit Tests
-
 ```bash
-# Test individual components
+# Unit tests
 pytest backend/tests/test_hyde.py
 pytest backend/tests/test_crag.py
 pytest backend/tests/test_reranker.py
-```
 
-### Integration Tests
-
-```bash
-# Test full pipeline
+# Integration
 pytest backend/tests/test_integration.py
-```
 
-### Frontend Tests
-
-```bash
-cd frontend
-npm run test
+# Frontend
+cd frontend && npm run test
 ```
 
 ---
 
-## Production Deployment
+## Production Notes
 
-### Recommendations
+Before going live, consider:
 
-1. **Vector Database**: Replace in-memory index with Pinecone/Weaviate
-2. **Caching**: Cache HyDE hypothetical documents
-3. **Rate Limiting**: Implement API rate limits
-4. **Monitoring**: Add Prometheus/Grafana metrics
-5. **Scaling**: Use Redis for session management
-6. **Security**: Add authentication/authorization
+- **Vector database** — Swap in-memory index for Pinecone or Weaviate
+- **Caching** — Cache HyDE hypothetical documents to reduce latency
+- **Rate limiting** — Protect the API endpoints
+- **Monitoring** — Instrument with Prometheus/Grafana
+- **Session management** — Use Redis for horizontal scaling
+- **Auth** — Add authentication before exposing publicly
 
-### Docker Deployment
+Docker deployment:
 
 ```bash
 docker-compose up -d
 ```
 
+---
+
 ## Contributing
 
-Contributions are welcome! Areas for improvement:
+Open areas:
 
-- [ ] Add support for more embedding models
-- [ ] Implement DSPy automatic optimization
-- [ ] Add streaming responses
-- [ ] Multi-language support
-- [ ] Fine-tuning cross-encoders on domain data
-
-## License
-
-MIT License - see LICENSE file for details
-
-
-## Support
-
-For questions or issues:
-- Create an issue on GitHub
-- Check the documentation in the app
-- Review the interactive architecture diagrams
+- [ ] Additional embedding model support
+- [ ] DSPy automatic prompt optimization
+- [ ] Streaming responses
+- [ ] Multi-language queries
+- [ ] Domain-specific cross-encoder fine-tuning
 
 ---
 
-<div align="center">
+## License
 
-**Built for technical audiences who demand production-ready RAG systems**
-
-⭐ Star this repo if you find it useful!
-
-</div>
-#   r a g - c h a t b o t  
- 
+MIT — see `LICENSE` for details.
